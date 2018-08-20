@@ -8,3 +8,6 @@ I would love to make something for the amiga. I'm looking at doing a game in ass
 Let's hope something comes from this.
 
 RC
+
+
+Update: I will add the include files that this is missing.
