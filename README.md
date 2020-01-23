@@ -11,3 +11,8 @@ RC
 
 
 Update: I will add the include files that this is missing.
+Update: I have cleaned up the Include files. The one labeled francv1.win.i should be the one used. I am still working out issues when I convert it for Amiga it still says the file contains binary data
+
+Will let you know when this is i fixed
+
+
