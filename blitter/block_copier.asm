@@ -1,7 +1,7 @@
 ; This program loads a screen, lifts a block from the screen then uses that 
-; block to make a srceen design using a table listed at the bottom of this
-; program. The table can be changed to form any shap on the screem.
-; Size of block is 4 bytes wide and 25 lines high. 32 x 25 = 320 x 200
+; block to make a screen design using a table listed at the bottom of this
+; program. The table can be changed to form any shape on the screen.
+; Size of block is 4 bytes wide (32 pixels) and 24 lines high. 32 x 24 = 320 x 192
 
 
 
@@ -57,6 +57,7 @@ run:
        moveq   #0,d0
        jsr     openlib(a6)
        move.l  d0,dosbase
+       beq     ende            ; Exit if DOS library couldn't be opened
 
        move.l  d0,a6
        lea     dosfile(pc),a1    ;file name
@@ -65,7 +66,7 @@ run:
        jsr     open(a6)          ;open the file
 
        move.l  d0,filehandle
-	beq	ende	
+       beq     closedos          ; If file open failed, close DOS and exit
 
        move.l  bitplane1,d2      ;buffer
        move.l  #8000,d3          ;length
@@ -75,7 +76,7 @@ run:
 
        move.l  bitplane2,d2      ;buffer
        move.l  #8000,d3          ;length
-       move.l  filehandle,d1             ;file handle
+       move.l  filehandle,d1     ;file handle
        move.l  dosbase,a6
        jsr     read(a6)          ;read in the picture
 
@@ -93,7 +94,7 @@ run:
 
        move.l  bitplane5,d2      ;buffer
        move.l  #8000,d3          ;length
-       move.l  filehandle,d1             ;file handle
+       move.l  filehandle,d1     ;file handle
        move.l  dosbase,a6
        jsr     read(a6)          ;read in the picture
 	
@@ -111,6 +112,12 @@ run:
 	bsr	PlaceBob
 	bsr 	MouseCheck
 	bra 	ende
+
+closedos:
+       move.l  dosbase,a1      ; Close DOS library before exiting
+       move.l  execbase,a6
+       jsr     closelibrary(a6)
+       bra     ende
 
 Clear:	
 	lea 	bitplane1(pc),a3
@@ -138,7 +145,7 @@ out2:
 
 BlockStart:
 
-	move.l	#0,d5		; Set x start value
+	move.l	#5,d5		; Set consistent x start value (was 0)
 	move.l	#0,d6		; Set y start value
 	move.l	#10,accros	; how many boxes to draw accross the screen
 	move.l	#8,down		; how many boxes down
@@ -163,7 +170,7 @@ Pb2:
 	lea	temp2,a1
 
 getblock2:
-	 move.l  (a3)+,a1
+	move.l  (a3)+,a1
 	movem.l	d5-d6,-(sp)
 
 	move.l	d6,d0
@@ -185,12 +192,12 @@ noblocking:
 getblock:
 	move.l	#3,d3
 	
+	; Fixed the redundant d0 assignment
 	move.w 	#16,d0
 
 make:
 	move.w 	#17,d1
-        move.l  #16,d0
-	
+        
 placeblock2:
         move.b  (a2)+,(a1)+      
 	dbra	d3,placeblock2
@@ -200,7 +207,8 @@ placeblock2:
 
 	cmp.w	#0,d1
 	sub.w	#1,d1
-        dbra    d0,placeblock2
+	bgt	placeblock2      ; Use bgt instead of dbra since d0 is changed
+        dbra    d0,make           ; Loop for all lines
 
 kickblock2:        
 
@@ -240,7 +248,13 @@ openint:
        lea     intname,a1      ;name of intuition library
        jsr     openlib(a6)     ;Open intuition
        move.l  d0,intbase      ;Save Intuition base address
+       tst.l   d0              ; Test if open was successful
+       beq     failure         ; Exit if failed
        rts
+       
+failure:
+       rts                     ; Return to caller to handle gracefully
+
 closeint:
        move.l  execbase,a6     ;*close Intuition
        move.l  intbase,a1      ;intuition base address in A1
@@ -251,6 +265,8 @@ opengfx:
        lea     gfxname,a1      ;name of intuition library
        jsr     openlib(a6)     ;Open intuition
        move.l  d0,gfxbase      ;Save Intuition base address
+       tst.l   d0              ; Test if open was successful
+       beq     failure         ; Exit if failed
        rts
 closegfx:
        move.l  execbase,a6     ;*close Intuition
@@ -264,6 +280,8 @@ scropen:
        lea     screen_defs,a0  ;Pointer to Table
        jsr     openscreen(a6)  ;OPen
        move.l  d0,screenhd     ;Save Screen Handle
+       tst.l   d0              ; Test if open was successful
+       beq     failure         ; Exit if failed
        move.l  d0,a0           ;get screen pointer ready
        move.l  $c0(a0),bitplane1       ;get pointer to bit plane # 1
        move.l  $c4(a0),bitplane2       ;get pointer to bit plane # 2
@@ -283,10 +301,12 @@ windowopen:
        lea     window_defs,a0  ;Pointer to Table
        jsr     openwindow(a6)  ;OPen
        move.l  d0,window       ;Save Screen Handle
-	move.l	d0,a0
-	move.l	intbase,a6
-	jsr	viewportaddress(a6)
-	move.l	a0,viewport
+       tst.l   d0              ; Test if open was successful
+       beq     failure         ; Exit if failed
+       move.l	d0,a0
+       move.l	intbase,a6
+       jsr	viewportaddress(a6)
+       move.l	a0,viewport
        rts
 
 windowclose:
@@ -496,8 +516,3 @@ table:		dc.b	$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
 
 
        end
-
-
-
-
-
