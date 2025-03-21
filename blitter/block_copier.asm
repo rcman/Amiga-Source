@@ -1,3 +1,4 @@
+; Updated March 21st 2025. Fixed some small issues
 ; This program loads a screen, lifts a block from the screen then uses that 
 ; block to make a screen design using a table listed at the bottom of this
 ; program. The table can be changed to form any shape on the screen.
